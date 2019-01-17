@@ -22,27 +22,44 @@ type token =
   | RParen /* ) */
   | LBrace /* { */
   | RBrace /* } */
-  | Ident
-  | Integer(string) /* TODO cast to int */
-  | Float(string)
+  | Ident(string)
+  | Integer(int)
+  | Float(float)
   | Keyword
   | Invalid(string);
 
 type state =
   | Number(string)
-  | Float(string)
+  | PartialF(string)
+  | Fractional(string)
   | String(string);
+
+exception Todo(string);
+
+let ($^) = (s, c) => s ++ String.make(1, c);
+let atoi = int_of_string;
+let atof = float_of_string;
 
 let lexer = (input: string) => {
   let rec tok = (input, buffer, tokens) => {
     switch (input) {
-    /* No characters left; reverse the tokens because we've been prepending tokens */
-    | [] => List.rev(tokens)
+    /* No characters left; empty the buffer and reverse the tokens because we've been prepending */
+    | [] =>
+      List.rev(
+        switch (buffer) {
+        | Some(Number(s)) => [Integer(atoi(s)), ...tokens]
+        | Some(PartialF(s)) => [Invalid("."), Integer(atoi(s)), ...tokens]
+        | Some(Fractional(s)) => [Float(atof(s)), ...tokens]
+        | Some(String(s)) => [Ident(s), ...tokens]
+        | None => tokens
+        },
+      )
     | _ =>
       /* We're gonna process the head now and recursively process the remainder (tail) */
       let head = List.hd(input);
       let tail = List.tl(input);
       let next = tok(tail);
+      let curr = tok(input);
 
       let lookAheadEql = (withEq: token, plain: token) =>
         switch (tail) {
@@ -51,51 +68,58 @@ let lexer = (input: string) => {
         };
 
       /* We're using a state machine to capture multi-character tokens like identifiers */
-      switch (head, buffer, tokens) {
-      /* Special characters: + - * / < <= > >= == != = ; , ( ) [ ] /* */ */
-
-      /* Parentheses and braces */
-      | ('(', None, t) => next(None, [LParen, ...t])
-      | (')', None, t) => next(None, [RParen, ...t])
-      | ('{', None, t) => next(None, [LBrace, ...t])
-      | ('}', None, t) => next(None, [RBrace, ...t])
-      /* Addition and subtraction */
-      | ('+', None, t) => next(None, [Plus, ...t])
-      | ('-', None, t) => next(None, [Minus, ...t])
-      /* Multiplication and division */
-      | ('*', None, t) => next(None, [Times, ...t])
-      | ('/', None, t) => next(None, [Divide, ...t])
-      /* Equality operators */
-      | ('>', None, _) => lookAheadEql(GreaterThan, GreaterThanEql)
-      | ('<', None, _) => lookAheadEql(LessThan, LessThanEql)
-      | ('!', None, _) => lookAheadEql(NotEqual, Invalid("!"))
-      | ('=', None, _) => lookAheadEql(Equal, Assignment)
-      /* Delimiters */
-      | (';', None, t) => next(None, [Semicolon, ...t])
-      | (',', None, t) => next(None, [Comma, ...t])
-      /* State: Numbers */
-      | ('0'..'9' as i, None, t) =>
-        next(Some(Number(String.make(1, i))), t)
-      | ('0'..'9' as i, Some(Number(n)), t) =>
-        let num = n ++ String.make(1, i);
-        switch (tail) {
-        | [] => next(None, [Integer(num), ...t]) /* 1 2 3 EOF */
-        | ['.', ...rem] =>
-          switch (rem) {
-          | ['0'..'9' as j, ...r] =>
-            tok(r, Some(Float(num ++ "." ++ String.make(1, j))), t)
-          | _ => tok(rem, None, [Invalid("."), Integer(num), ...t]) /* 1 2 3 . EOF */
-          }
-        | _ => next(Some(Number(num)), t)
-        };
-      | ('0'..'9' as i, Some(Float(n)), t) =>
-        let num = n ++ String.make(1, i)
-        switch (tail) {
-        | [] => next(None, [Float(num), ...t])
-        | _ => next(Some(Float(num)), t)
+      switch (buffer) {
+      | None =>
+        switch (head, tokens) {
+        /* Parentheses and braces */
+        | ('(', t) => next(None, [LParen, ...t])
+        | (')', t) => next(None, [RParen, ...t])
+        | ('{', t) => next(None, [LBrace, ...t])
+        | ('}', t) => next(None, [RBrace, ...t])
+        /* Addition and subtraction */
+        | ('+', t) => next(None, [Plus, ...t])
+        | ('-', t) => next(None, [Minus, ...t])
+        /* Multiplication and division */
+        | ('*', t) => next(None, [Times, ...t])
+        | ('/', t) => next(None, [Divide, ...t])
+        /* Equality operators */
+        | ('>', _) => lookAheadEql(GreaterThan, GreaterThanEql)
+        | ('<', _) => lookAheadEql(LessThan, LessThanEql)
+        | ('!', _) => lookAheadEql(NotEqual, Invalid("!"))
+        | ('=', _) => lookAheadEql(Equal, Assignment)
+        /* Delimiters */
+        | (';', t) => next(None, [Semicolon, ...t])
+        | (',', t) => next(None, [Comma, ...t])
+        /* Builders */
+        | ('0'..'9' as i, t) => next(Some(Number(String.make(1, i))), t)
+        | ('a'..'z' as a, t) => next(Some(String(String.make(1, a))), t)
+        /* Error */
+        | (a, t) => next(None, [Invalid(String.make(1, a)), ...t])
         }
-      /* Invalid token */
-      | (a, _, t) => next(None, [Invalid(String.make(1, a)), ...t])
+      /* State: Valid numbers */
+      | Some(Number(n)) =>
+        switch (head, tokens) {
+        | ('0'..'9' as i, t) => next(Some(Number(n $^ i)), t)
+        | ('.', t) => next(Some(PartialF(n)), t)
+        | (_, t) => curr(None, [Integer(atoi(n)), ...t])
+        }
+      /* State: Numbers ending with a decimal */
+      | Some(PartialF(n)) =>
+        switch (head, tokens) {
+        | ('0'..'9' as i, t) => next(Some(Fractional(n ++ "." $^ i)), t)
+        | (_, t) => curr(None, [Invalid("."), Integer(atoi(n)), ...t])
+        }
+      /* State: Valid floats */
+      | Some(Fractional(f)) =>
+        switch (head, tokens) {
+        | ('0'..'9' as i, t) => next(Some(Fractional(f $^ i)), t)
+        | (_, t) => curr(None, [Float(atof(f)), ...t])
+        }
+      | Some(String(s)) =>
+        switch (head, tokens) {
+        | ('a'..'z' as i, t) => next(Some(String(s $^ i)), t)
+        | (_, t) => curr(None, [Ident(s), ...t])
+        }
       };
     };
   };
@@ -107,8 +131,8 @@ let rec printTokens = (tokens: list(token)) => {
   let tail = List.tl(tokens);
   Js.log(
     switch (head) {
-    | Integer(n) => "integer: " ++ n
-    | Float(n) => "float: " ++ n
+    | Integer(n) => "integer: " ++ string_of_int(n)
+    | Float(n) => "float: " ++ string_of_float(n)
     | Invalid(n) => "invalid: " ++ n
     | _ => ""
     },
@@ -118,13 +142,11 @@ let rec printTokens = (tokens: list(token)) => {
   };
 };
 
-printTokens(lexer("123.4567"));
+/* printTokens(lexer("123.4567")); */
 
-let xs = explode("123.4567");
-let rec wtf = xs => {
+/* let xs = explode("123.4567");
+let rec wtf = xs =>
   if (xs != []) {
     Js.log(String.make(1, List.hd(xs)));
     wtf(List.tl(xs));
-  };
-};
-wtf(xs);
+  }; */
