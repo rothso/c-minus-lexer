@@ -61,10 +61,10 @@ let lexer = (input: string) => {
       let next = tok(tail);
       let curr = tok(input);
 
-      let lookAheadEql = (withEq: token, plain: token) =>
+      let lookAhead = (char, found: token, notFound: token) =>
         switch (tail) {
-        | ['=', ...rem] => tok(rem, None, [withEq, ...tokens])
-        | _ => next(None, [plain, ...tokens])
+        | [c, ...rem] when c == char => tok(rem, None, [found, ...tokens])
+        | _ => next(None, [notFound, ...tokens])
         };
 
       /* We're using a state machine to capture multi-character tokens like identifiers */
@@ -83,10 +83,10 @@ let lexer = (input: string) => {
         | ('*', t) => next(None, [Times, ...t])
         | ('/', t) => next(None, [Divide, ...t])
         /* Equality operators */
-        | ('>', _) => lookAheadEql(GreaterThan, GreaterThanEql)
-        | ('<', _) => lookAheadEql(LessThan, LessThanEql)
-        | ('!', _) => lookAheadEql(NotEqual, Invalid("!"))
-        | ('=', _) => lookAheadEql(Equal, Assignment)
+        | ('>', _) => lookAhead('=', GreaterThan, GreaterThanEql)
+        | ('<', _) => lookAhead('=', LessThan, LessThanEql)
+        | ('!', _) => lookAhead('=', NotEqual, Invalid("!"))
+        | ('=', _) => lookAhead('=', Equal, Assignment)
         /* Delimiters */
         | (';', t) => next(None, [Semicolon, ...t])
         | (',', t) => next(None, [Comma, ...t])
@@ -145,8 +145,8 @@ let rec printTokens = (tokens: list(token)) => {
 /* printTokens(lexer("123.4567")); */
 
 /* let xs = explode("123.4567");
-let rec wtf = xs =>
-  if (xs != []) {
-    Js.log(String.make(1, List.hd(xs)));
-    wtf(List.tl(xs));
-  }; */
+   let rec wtf = xs =>
+     if (xs != []) {
+       Js.log(String.make(1, List.hd(xs)));
+       wtf(List.tl(xs));
+     }; */
