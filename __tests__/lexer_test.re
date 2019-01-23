@@ -91,6 +91,12 @@ describe("Lexer", () => {
     expect(lexer(str)) |> toEqual([]);
   });
 
+  test("ignores line comments", () =>
+    expect(lexer("1
+    // ignore me
+    2")) |> toEqual([Integer(1), Integer(2)])
+  );
+
   test("reads integers at the end of the string", () =>
     expect(lexer("123")) |> toEqual([Integer(123)])
   );

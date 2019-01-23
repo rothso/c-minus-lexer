@@ -36,7 +36,8 @@ type state =
   | Partial(string)
   | Fractional(string)
   | String(string)
-  | Comment(int);
+  | Comment(int)
+  | LineComment;
 
 exception Todo(string);
 
@@ -82,7 +83,7 @@ let lexer = (input: string) => {
         | Some(Partial(s)) => [Invalid("."), Integer(atoi(s)), ...tokens]
         | Some(Fractional(s)) => [FloatingPoint(atof(s)), ...tokens]
         | Some(String(s)) => [identify(s), ...tokens]
-        | Some(Comment(_)) => tokens /* TODO throw exception */
+        | Some(Comment(_) | LineComment) => tokens /* TODO throw exception */
         | None => tokens
         },
       )
@@ -123,6 +124,7 @@ let lexer = (input: string) => {
         | ('/', t) =>
           switch (tail) {
           | ['*', ...rem] => tok(rem, Some(Comment(1)), t)
+          | ['/', ...rem] => tok(rem, Some(LineComment), t)
           | _ => next(None, [Divide, ...tokens])
           }
         /* Equality operators */
@@ -164,12 +166,18 @@ let lexer = (input: string) => {
         | ('a'..'z' as i, t) => next(Some(String(s $^ i)), t)
         | (_, t) => curr(None, [identify(s), ...t])
         }
-      /* State: Comments (can be nested) */
+      /* State: Block comments (can be nested) */
       | Some(Comment(i)) as state =>
         switch (head, tokens) {
         | ('/', _) => lookAheadS('*', Some(Comment(i + 1)))
         | ('*', _) => lookAheadS('/', i == 1 ? None : Some(Comment(i - 1)))
         | (_, t) => next(state, t)
+        }
+      /* State: Line comments */
+      | Some(LineComment) =>
+        switch (head, tokens) {
+        | ('\n', t) => next(None, t)
+        | (_, t) => next(Some(LineComment), t)
         }
       };
     };
