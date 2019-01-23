@@ -30,9 +30,10 @@ type token =
 
 type state =
   | Number(string)
-  | PartialF(string)
+  | Partial(string)
   | Fractional(string)
-  | String(string);
+  | String(string)
+  | Comment(int);
 
 exception Todo(string);
 
@@ -48,9 +49,10 @@ let lexer = (input: string) => {
       List.rev(
         switch (buffer) {
         | Some(Number(s)) => [Integer(atoi(s)), ...tokens]
-        | Some(PartialF(s)) => [Invalid("."), Integer(atoi(s)), ...tokens]
+        | Some(Partial(s)) => [Invalid("."), Integer(atoi(s)), ...tokens]
         | Some(Fractional(s)) => [Float(atof(s)), ...tokens]
         | Some(String(s)) => [Ident(s), ...tokens]
+        | Some(Comment(_)) => tokens /* TODO throw exception */
         | None => tokens
         },
       )
@@ -61,16 +63,23 @@ let lexer = (input: string) => {
       let next = tok(tail);
       let curr = tok(input);
 
-      let lookAhead = (char, found: token, notFound: token) =>
+      let lookAheadEq = (found: token, notFound: token) =>
         switch (tail) {
-        | [c, ...rem] when c == char => tok(rem, None, [found, ...tokens])
+        | ['=', ...rem] => tok(rem, None, [found, ...tokens])
         | _ => next(None, [notFound, ...tokens])
+        };
+
+      let lookAheadS = (char, nextState) =>
+        switch (tail) {
+        | [c, ...rem] when c == char => tok(rem, nextState, tokens)
+        | _ => next(buffer, tokens) /* stay in the same state */
         };
 
       /* We're using a state machine to capture multi-character tokens like identifiers */
       switch (buffer) {
       | None =>
         switch (head, tokens) {
+        | (' ' | '\t' | '\n', t) => next(None, t)
         /* Parentheses and braces */
         | ('(', t) => next(None, [LParen, ...t])
         | (')', t) => next(None, [RParen, ...t])
@@ -81,12 +90,16 @@ let lexer = (input: string) => {
         | ('-', t) => next(None, [Minus, ...t])
         /* Multiplication and division */
         | ('*', t) => next(None, [Times, ...t])
-        | ('/', t) => next(None, [Divide, ...t])
+        | ('/', t) =>
+          switch (tail) {
+          | ['*', ...rem] => tok(rem, Some(Comment(1)), t)
+          | _ => next(None, [Divide, ...tokens])
+          }
         /* Equality operators */
-        | ('>', _) => lookAhead('=', GreaterThan, GreaterThanEql)
-        | ('<', _) => lookAhead('=', LessThan, LessThanEql)
-        | ('!', _) => lookAhead('=', NotEqual, Invalid("!"))
-        | ('=', _) => lookAhead('=', Equal, Assignment)
+        | ('>', _) => lookAheadEq(GreaterThan, GreaterThanEql)
+        | ('<', _) => lookAheadEq(LessThan, LessThanEql)
+        | ('!', _) => lookAheadEq(NotEqual, Invalid("!"))
+        | ('=', _) => lookAheadEq(Equal, Assignment)
         /* Delimiters */
         | (';', t) => next(None, [Semicolon, ...t])
         | (',', t) => next(None, [Comma, ...t])
@@ -100,11 +113,11 @@ let lexer = (input: string) => {
       | Some(Number(n)) =>
         switch (head, tokens) {
         | ('0'..'9' as i, t) => next(Some(Number(n $^ i)), t)
-        | ('.', t) => next(Some(PartialF(n)), t)
+        | ('.', t) => next(Some(Partial(n)), t)
         | (_, t) => curr(None, [Integer(atoi(n)), ...t])
         }
       /* State: Numbers ending with a decimal */
-      | Some(PartialF(n)) =>
+      | Some(Partial(n)) =>
         switch (head, tokens) {
         | ('0'..'9' as i, t) => next(Some(Fractional(n ++ "." $^ i)), t)
         | (_, t) => curr(None, [Invalid("."), Integer(atoi(n)), ...t])
@@ -115,10 +128,18 @@ let lexer = (input: string) => {
         | ('0'..'9' as i, t) => next(Some(Fractional(f $^ i)), t)
         | (_, t) => curr(None, [Float(atof(f)), ...t])
         }
+      /* State: Identifiers */
       | Some(String(s)) =>
         switch (head, tokens) {
         | ('a'..'z' as i, t) => next(Some(String(s $^ i)), t)
         | (_, t) => curr(None, [Ident(s), ...t])
+        }
+      /* State: Comments (can be nested) */
+      | Some(Comment(i)) as state =>
+        switch (head, tokens) {
+        | ('/', _) => lookAheadS('*', Some(Comment(i + 1)))
+        | ('*', _) => lookAheadS('/', i == 1 ? None : Some(Comment(i - 1)))
+        | (_, t) => next(state, t)
         }
       };
     };

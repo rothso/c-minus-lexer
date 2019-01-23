@@ -5,23 +5,42 @@ describe("Lexer", () => {
   open! Expect.Operators;
 
   /* test("parses exampe 1", () => {
-    let input = {|
-    /**/          /*/* */   */
-    /*/*/****This**********/*/    */
-    /**************/
-    /*************************
-    i = 333;        ******************/       
+       let input = {|
+       /**/          /*/* */   */
+       /*/*/****This**********/*/    */
+       /**************/
+       /*************************
+       i = 333;        ******************/
 
-    iiii = 3@33;
+       iiii = 3@33;
 
-    int g 4 cd (int u, int v)      {
-    if(v == >= 0) return/*a comment*/ u;
-    else ret_urn gcd(vxxxxxxvvvvv, u-u/v*v);
-          /* u-u/v*v == u mod v*/
-    !
-    }|};
-    expect(lexer(input)) |> toEqual([Integer(123)]);
-  }); */
+       int g 4 cd (int u, int v)      {
+       if(v == >= 0) return/*a comment*/ u;
+       else ret_urn gcd(vxxxxxxvvvvv, u-u/v*v);
+             /* u-u/v*v == u mod v*/
+       !
+       }|};
+       expect(lexer(input)) |> toEqual([Integer(123)]);
+     }); */
+
+  test("ignores comments", () =>
+    expect(lexer("1/*comment*/1")) |> toEqual([Integer(1), Integer(1)])
+  );
+
+  test("ignores comments with spaces", () =>
+    expect(lexer("/**/          /*/* */   */")) |> toEqual([])
+  );
+
+  test("ignores nested comments", () =>
+    expect(lexer("1/*co/*e*/nt*/1")) |> toEqual([Integer(1), Integer(1)])
+  );
+
+  test("ignores multiline comments", () => {
+    let str = {|/**************/
+                /*************************
+                i = 333;        ******************/|};
+    expect(lexer(str)) |> toEqual([]);
+  });
 
   test("reads integers at the end", () =>
     expect(lexer("123")) |> toEqual([Integer(123)])
