@@ -126,8 +126,8 @@ let lexer = (input: string) => {
           | _ => next(None, [Divide, ...tokens])
           }
         /* Equality operators */
-        | ('>', _) => lookAheadEq(GreaterThan, GreaterThanEql)
-        | ('<', _) => lookAheadEq(LessThan, LessThanEql)
+        | ('>', _) => lookAheadEq(GreaterThanEql, GreaterThan)
+        | ('<', _) => lookAheadEq(LessThanEql, LessThan)
         | ('!', _) => lookAheadEq(NotEqual, Invalid("!"))
         | ('=', _) => lookAheadEq(Equal, Assignment)
         /* Delimiters */
