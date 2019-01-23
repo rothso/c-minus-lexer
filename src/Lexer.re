@@ -1,8 +1,11 @@
-let explode = (input: string): list(char) => {
-  let rec exp = (i, chars) =>
-    i >= 0 ? exp(i - 1, [input.[i], ...chars]) : chars;
-  exp(String.length(input) - 1, []);
-};
+type keyword =
+  | If
+  | Else
+  | Int
+  | Float
+  | Void
+  | While
+  | Return;
 
 type token =
   | Plus /* + */
@@ -24,8 +27,8 @@ type token =
   | RBrace /* } */
   | Ident(string)
   | Integer(int)
-  | Float(float)
-  | Keyword
+  | FloatingPoint(float)
+  | Keyword(keyword)
   | Invalid(string);
 
 type state =
@@ -37,9 +40,36 @@ type state =
 
 exception Todo(string);
 
+/* Helper functions (to keep the lines short) */
 let ($^) = (s, c) => s ++ String.make(1, c);
 let atoi = int_of_string;
 let atof = float_of_string;
+
+let explode = (input: string): list(char) => {
+  let rec exp = (i, chars) =>
+    i >= 0 ? exp(i - 1, [input.[i], ...chars]) : chars;
+  exp(String.length(input) - 1, []);
+};
+
+module StringMap = Map.Make(String);
+
+let keywords =
+  StringMap.(
+    empty
+    |> add("if", If)
+    |> add("else", Else)
+    |> add("int", Int)
+    |> add("float", Float)
+    |> add("void", Void)
+    |> add("while", While)
+    |> add("return", Return)
+  );
+
+let identify = string =>
+  switch (StringMap.find(string, keywords)) {
+  | exception Not_found => Ident(string)
+  | keyword => Keyword(keyword)
+  };
 
 let lexer = (input: string) => {
   let rec tok = (input, buffer, tokens) => {
@@ -50,8 +80,8 @@ let lexer = (input: string) => {
         switch (buffer) {
         | Some(Number(s)) => [Integer(atoi(s)), ...tokens]
         | Some(Partial(s)) => [Invalid("."), Integer(atoi(s)), ...tokens]
-        | Some(Fractional(s)) => [Float(atof(s)), ...tokens]
-        | Some(String(s)) => [Ident(s), ...tokens]
+        | Some(Fractional(s)) => [FloatingPoint(atof(s)), ...tokens]
+        | Some(String(s)) => [identify(s), ...tokens]
         | Some(Comment(_)) => tokens /* TODO throw exception */
         | None => tokens
         },
@@ -69,9 +99,9 @@ let lexer = (input: string) => {
         | _ => next(None, [notFound, ...tokens])
         };
 
-      let lookAheadS = (char, nextState) =>
+      let lookAheadS = (char: char, state: option(state)) =>
         switch (tail) {
-        | [c, ...rem] when c == char => tok(rem, nextState, tokens)
+        | [c, ...rem] when c == char => tok(rem, state, tokens)
         | _ => next(buffer, tokens) /* stay in the same state */
         };
 
@@ -126,13 +156,13 @@ let lexer = (input: string) => {
       | Some(Fractional(f)) =>
         switch (head, tokens) {
         | ('0'..'9' as i, t) => next(Some(Fractional(f $^ i)), t)
-        | (_, t) => curr(None, [Float(atof(f)), ...t])
+        | (_, t) => curr(None, [FloatingPoint(atof(f)), ...t])
         }
       /* State: Identifiers */
       | Some(String(s)) =>
         switch (head, tokens) {
         | ('a'..'z' as i, t) => next(Some(String(s $^ i)), t)
-        | (_, t) => curr(None, [Ident(s), ...t])
+        | (_, t) => curr(None, [identify(s), ...t])
         }
       /* State: Comments (can be nested) */
       | Some(Comment(i)) as state =>
@@ -146,28 +176,3 @@ let lexer = (input: string) => {
   };
   tok(explode(input), None, []);
 };
-
-let rec printTokens = (tokens: list(token)) => {
-  let head = List.hd(tokens);
-  let tail = List.tl(tokens);
-  Js.log(
-    switch (head) {
-    | Integer(n) => "integer: " ++ string_of_int(n)
-    | Float(n) => "float: " ++ string_of_float(n)
-    | Invalid(n) => "invalid: " ++ n
-    | _ => ""
-    },
-  );
-  if (tail != []) {
-    printTokens(tail);
-  };
-};
-
-/* printTokens(lexer("123.4567")); */
-
-/* let xs = explode("123.4567");
-   let rec wtf = xs =>
-     if (xs != []) {
-       Js.log(String.make(1, List.hd(xs)));
-       wtf(List.tl(xs));
-     }; */

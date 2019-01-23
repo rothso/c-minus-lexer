@@ -51,7 +51,7 @@ describe("Lexer", () => {
   );
 
   test("reads floats at the end", () =>
-    expect(lexer("123.12345")) |> toEqual([Float(123.12345)])
+    expect(lexer("123.12345")) |> toEqual([FloatingPoint(123.12345)])
   );
 
   test("doesn't read improper float", () =>
@@ -59,7 +59,27 @@ describe("Lexer", () => {
   );
 
   test("skips improper float decimal", () =>
-    expect(lexer("123.)"))
-    |> toEqual([Integer(123), Invalid("."), RParen])
+    expect(lexer("1.)")) |> toEqual([Integer(1), Invalid("."), RParen])
+  );
+
+  test("recognizes keywords", () =>
+    expect(lexer("int float void while if else return"))
+    |> toEqual([
+         Keyword(Int),
+         Keyword(Float),
+         Keyword(Void),
+         Keyword(While),
+         Keyword(If),
+         Keyword(Else),
+         Keyword(Return),
+       ])
+  );
+
+  test("recognizes identifiers", () =>
+    expect(lexer("a bba")) |> toEqual([Ident("a"), Ident("bba")])
+  );
+
+  test("splits numbers from identifiers", () =>
+    expect(lexer("abc99")) |> toEqual([Ident("abc"), Integer(99)])
   );
 });
