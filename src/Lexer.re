@@ -72,7 +72,7 @@ let identify = string =>
   | keyword => Keyword(keyword)
   };
 
-let lexer = (input: string) => {
+let tokenize = (input: string) => {
   let rec tok = (input, buffer, tokens) => {
     switch (input) {
     /* No characters left; empty the buffer and reverse the tokens because we've been prepending */
@@ -110,7 +110,7 @@ let lexer = (input: string) => {
       switch (buffer) {
       | None =>
         switch (head, tokens) {
-        | (' ' | '\t' | '\n', t) => next(None, t)
+        | (' ' | '\t' | '\n' | '\r', t) => next(None, t)
         /* Parentheses and braces */
         | ('(', t) => next(None, [LParen, ...t])
         | (')', t) => next(None, [RParen, ...t])

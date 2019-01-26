@@ -1,10 +1,11 @@
 open Jest;
 open Lexer;
+
 describe("Lexer", () => {
   open Expect;
   open! Expect.Operators;
 
-  test("lexes Eggen's sample input", () => {
+  test("tokenizes Eggen's sample input", () => {
     let input = {|
        /**/          /*/* */   */
        /*/*/****This**********/*/    */
@@ -20,7 +21,7 @@ describe("Lexer", () => {
              /* u-u/v*v == u mod v*/
        !
        }|};
-    expect(lexer(input))
+    expect(tokenize(input))
     |> toEqual([
          Ident("iiii"),
          Assignment,
@@ -72,53 +73,59 @@ describe("Lexer", () => {
        ]);
   });
 
+  test("ignores whitespace", () => {
+    expect(tokenize(" 1\t1\n\r ")) |> toEqual([Integer(1), Integer(1)])
+  })
+
   test("ignores comments", () =>
-    expect(lexer("1/*comment*/1")) |> toEqual([Integer(1), Integer(1)])
+    expect(tokenize("1/*comment*/1")) |> toEqual([Integer(1), Integer(1)])
   );
 
   test("ignores comments containing spaces", () =>
-    expect(lexer("/**/          /*/* */   */")) |> toEqual([])
+    expect(tokenize("/**/          /*/* */   */")) |> toEqual([])
   );
 
   test("ignores nested comments", () =>
-    expect(lexer("1/*co/*e*/nt*/1")) |> toEqual([Integer(1), Integer(1)])
+    expect(tokenize("1/*co/*e*/nt*/1"))
+    |> toEqual([Integer(1), Integer(1)])
   );
 
   test("ignores multiline comments", () => {
     let str = {|/**************/
                 /*************************
                 i = 333;        ******************/|};
-    expect(lexer(str)) |> toEqual([]);
+    expect(tokenize(str)) |> toEqual([]);
   });
 
   test("ignores line comments", () =>
-    expect(lexer("1
+    expect(tokenize("1
     // ignore me
-    2")) |> toEqual([Integer(1), Integer(2)])
+    2"))
+    |> toEqual([Integer(1), Integer(2)])
   );
 
   test("reads integers at the end of the string", () =>
-    expect(lexer("123")) |> toEqual([Integer(123)])
+    expect(tokenize("123")) |> toEqual([Integer(123)])
   );
 
   test("reads integers surrounded by parentheses", () =>
-    expect(lexer("(123)")) |> toEqual([LParen, Integer(123), RParen])
+    expect(tokenize("(123)")) |> toEqual([LParen, Integer(123), RParen])
   );
 
   test("reads floats at the end of the string", () =>
-    expect(lexer("123.12345")) |> toEqual([FloatingPoint(123.12345)])
+    expect(tokenize("123.12345")) |> toEqual([FloatingPoint(123.12345)])
   );
 
   test("doesn't read improper floats", () =>
-    expect(lexer("123.")) |> toEqual([Integer(123), Invalid(".")])
+    expect(tokenize("123.")) |> toEqual([Integer(123), Invalid(".")])
   );
 
   test("skips dangling float decimal", () =>
-    expect(lexer("1.)")) |> toEqual([Integer(1), Invalid("."), RParen])
+    expect(tokenize("1.)")) |> toEqual([Integer(1), Invalid("."), RParen])
   );
 
   test("recognizes keywords", () =>
-    expect(lexer("int float void while if else return"))
+    expect(tokenize("int float void while if else return"))
     |> toEqual([
          Keyword(Int),
          Keyword(Float),
@@ -131,10 +138,10 @@ describe("Lexer", () => {
   );
 
   test("reads identifiers", () =>
-    expect(lexer("a bba")) |> toEqual([Ident("a"), Ident("bba")])
+    expect(tokenize("a bba")) |> toEqual([Ident("a"), Ident("bba")])
   );
 
   test("reads identifiers followed by numbers", () =>
-    expect(lexer("abc99")) |> toEqual([Ident("abc"), Integer(99)])
+    expect(tokenize("abc99")) |> toEqual([Ident("abc"), Integer(99)])
   );
 });
