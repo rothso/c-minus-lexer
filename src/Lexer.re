@@ -72,20 +72,26 @@ let identify = string =>
   | keyword => Keyword(keyword)
   };
 
-let tokenize = (input: string) => {
+let tokenize2 = (~state=?, input: string) => {
   let rec tok = (input, buffer, tokens) => {
     switch (input) {
     /* No characters left; empty the buffer and reverse the tokens because we've been prepending */
-    | [] =>
-      List.rev(
-        switch (buffer) {
-        | Some(Number(s)) => [Integer(atoi(s)), ...tokens]
-        | Some(Partial(s)) => [Invalid("."), Integer(atoi(s)), ...tokens]
-        | Some(Fractional(s)) => [FloatingPoint(atof(s)), ...tokens]
-        | Some(String(s)) => [identify(s), ...tokens]
-        | Some(Comment(_) | LineComment) => tokens /* TODO throw exception */
-        | None => tokens
-        },
+    | [] => (
+        List.rev(
+          switch (buffer) {
+          | Some(Number(s)) => [Integer(atoi(s)), ...tokens]
+          | Some(Partial(s)) => [
+              Invalid("."),
+              Integer(atoi(s)),
+              ...tokens,
+            ]
+          | Some(Fractional(s)) => [FloatingPoint(atof(s)), ...tokens]
+          | Some(String(s)) => [identify(s), ...tokens]
+          | Some(Comment(_) | LineComment) => tokens /* TODO throw exception */
+          | None => tokens
+          },
+        ),
+        buffer,
       )
     | _ =>
       /* We're gonna process the head now and recursively process the remainder (tail) */
@@ -182,5 +188,10 @@ let tokenize = (input: string) => {
       };
     };
   };
-  tok(explode(input), None, []);
+  tok(explode(input), state, []);
 };
+
+let tokenize = (~state=?, input: string) =>
+  switch (tokenize2(~state?, input)) {
+  | (tokens, _) => tokens
+  };

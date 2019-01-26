@@ -45,8 +45,17 @@ let file =
     exit(1);
   };
 
-let () =
-  Node.Fs.readFileAsUtf8Sync(file)
-  |> tokenize
-  |> List.map(tokenToString)
-  |> List.iter(Js.log);
+Node.Fs.readFileAsUtf8Sync(file)
+|> Js.String.split("\n")
+|> Array.fold_left(
+     (prevState, line) => {
+       Js.log("\027[36m>>>> " ++ line ++ "\027[0m");
+       let (tokens, state) = tokenize2(~state=?prevState, line);
+       tokens |> List.map(tokenToString) |> List.iter(Js.log);
+       switch(state) {
+        | Some(Comment(_)) => state
+        | _ => None
+       }
+     },
+     None,
+   );
