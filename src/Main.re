@@ -38,6 +38,7 @@ let tokenToString = (token: token): string =>
   | Invalid(string) => "error:\t" ++ string
   };
 
+/* The user must provide the name of the C- file */
 let file =
   try (Sys.argv[2]) {
   | _ =>
@@ -45,17 +46,22 @@ let file =
     exit(1);
   };
 
+/* Read the input C- file and tokenize it line-by-line */
 Node.Fs.readFileAsUtf8Sync(file)
 |> Js.String.split("\n")
 |> Array.fold_left(
      (prevState, line) => {
+       /* Print the current line */
        Js.log("\027[36m>>>> " ++ line ++ "\027[0m");
-       let (tokens, state) = tokenize2(~state=?prevState, line);
+       /* Tokenize it, resuming from the previous state */
+       let (tokens, nextState) = tokenize2(~state=?prevState, line);
+       /* Print the tokens */
        tokens |> List.map(tokenToString) |> List.iter(Js.log);
-       switch(state) {
-        | Some(Comment(_)) => state
-        | _ => None
-       }
+       /* The next line needs to know if we are in a comment state */
+       switch (nextState) {
+       | Some(Comment(_)) => nextState
+       | _ => None
+       };
      },
      None,
    );

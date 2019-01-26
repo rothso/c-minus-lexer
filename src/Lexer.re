@@ -191,6 +191,8 @@ let tokenize2 = (~state=?, input: string) => {
   tok(explode(input), state, []);
 };
 
+/* This variant of the tokenize function discards the output state
+   because it is typically irrelevant */
 let tokenize = (~state=?, input: string) =>
   switch (tokenize2(~state?, input)) {
   | (tokens, _) => tokens

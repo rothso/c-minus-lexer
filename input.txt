@@ -12,3 +12,5 @@ else ret_urn gcd(vxxxxxxvvvvv, u-u/v*v);
         /* u-u/v*v == u mod v*/
 !
 }
+
+return void while       void main()

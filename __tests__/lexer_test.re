@@ -7,20 +7,22 @@ describe("Lexer", () => {
 
   test("tokenizes Eggen's sample input", () => {
     let input = {|
-       /**/          /*/* */   */
-       /*/*/****This**********/*/    */
-       /**************/
-       /*************************
-       i = 333;        ******************/
+      /**/          /*/* */   */
+      /*/*/****This**********/*/    */
+      /**************/
+      /*************************
+      i = 333;        ******************/
 
-       iiii = 3@33;
+      iiii = 3@33;
 
-       int g 4 cd (int u, int v)      {
-       if(v == >= 0) return/*a comment*/ u;
-       else ret_urn gcd(vxxxxxxvvvvv, u-u/v*v);
-             /* u-u/v*v == u mod v*/
-       !
-       }|};
+      int g 4 cd (int u, int v)      {
+      if(v == >= 0) return/*a comment*/ u;
+      else ret_urn gcd(vxxxxxxvvvvv, u-u/v*v);
+            /* u-u/v*v == u mod v*/
+      !
+      }
+
+      return void while       void main()|};
     expect(tokenize(input))
     |> toEqual([
          Ident("iiii"),
@@ -70,12 +72,19 @@ describe("Lexer", () => {
          Semicolon,
          Invalid("!"),
          RBrace,
+         Keyword(Return),
+         Keyword(Void),
+         Keyword(While),
+         Keyword(Void),
+         Ident("main"),
+         LParen,
+         RParen
        ]);
   });
 
-  test("ignores whitespace", () => {
+  test("ignores whitespace", () =>
     expect(tokenize(" 1\t1\n\r ")) |> toEqual([Integer(1), Integer(1)])
-  })
+  );
 
   test("ignores comments", () =>
     expect(tokenize("1/*comment*/1")) |> toEqual([Integer(1), Integer(1)])
