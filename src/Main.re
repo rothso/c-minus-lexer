@@ -38,8 +38,15 @@ let tokenToString = (token: token): string =>
   | Invalid(string) => "error:\t" ++ string
   };
 
+let file =
+  try (Sys.argv[2]) {
+  | _ =>
+    Js.log("Error: no file specified in args");
+    exit(1);
+  };
+
 let () =
-  Node.Fs.readFileAsUtf8Sync("input.txt")
+  Node.Fs.readFileAsUtf8Sync(file)
   |> tokenize
   |> List.map(tokenToString)
   |> List.iter(Js.log);
