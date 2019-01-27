@@ -1,0 +1,2 @@
+#!/usr/bin/env bash
+/var/tmp/node/bin/node src/Main.bs.js $1

@@ -4,8 +4,7 @@
   "scripts": {
     "build": "bsb -make-world",
     "start": "bsb -make-world -w",
-    "clean": "bsb -clean-world",
-    "test": "jest --watch"
+    "clean": "bsb -clean-world"
   },
   "keywords": [
     "BuckleScript"
