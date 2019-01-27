@@ -63,5 +63,5 @@ Node.Fs.readFileAsUtf8Sync(file)
        | _ => None
        };
      },
-     None,
+     None
    );

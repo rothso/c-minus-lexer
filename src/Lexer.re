@@ -83,13 +83,13 @@ let tokenize2 = (~state=?, input: string) => {
           | Some(Partial(s)) => [
               Invalid("."),
               Integer(atoi(s)),
-              ...tokens,
+              ...tokens
             ]
           | Some(Fractional(s)) => [FloatingPoint(atof(s)), ...tokens]
           | Some(String(s)) => [identify(s), ...tokens]
           | Some(Comment(_) | LineComment) => tokens /* TODO throw exception */
           | None => tokens
-          },
+          }
         ),
         buffer,
       )
