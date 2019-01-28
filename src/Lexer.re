@@ -155,6 +155,7 @@ let tokenize = (~state=?, input: string) => {
         switch (head, tokens) {
         | ('0'..'9' as i, t) => next(Some(Number(n $^ i)), t)
         | ('.', t) => next(Some(Partial(n)), t)
+        | ('E', t) => next(Some(Partial2(n)), t)
         | (_, t) => curr(None, dump(state) @ t)
         }
       /* State: Numbers ending with a decimal */

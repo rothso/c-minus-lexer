@@ -119,10 +119,6 @@ describe("Lexer", () => {
     |> toEqual([Integer(1), Integer(2)])
   );
 
-  test("reads integers at the end of the string", () =>
-    expect(tokenize("123")) |> toEqual([Integer(123)])
-  );
-
   test("reads integers surrounded by parentheses", () =>
     expect(tokenize("(123)")) |> toEqual([LParen, Integer(123), RParen])
   );
@@ -153,11 +149,15 @@ describe("Lexer", () => {
     |> toEqual([FloatingPoint(6.0), Invalid("E"), Invalid("+")])
   );
 
-  test("reads floats expressed in scientific notation", () =>
+  test("reads integers in scientific notation as floats", () =>
+    expect(tokenize("1E2")) |> toEqual([FloatingPoint(1E2)])
+  );
+
+  test("reads floats in scientific notation", () =>
     expect(tokenize("1.2E2")) |> toEqual([FloatingPoint(120.0)])
   );
 
-  test("reads floats expressed in signed scientific notation", () =>
+  test("reads floats in signed scientific notation", () =>
     expect(tokenize("120.0E-2")) |> toEqual([FloatingPoint(1.2)])
   );
 
