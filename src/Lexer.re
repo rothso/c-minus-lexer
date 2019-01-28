@@ -42,14 +42,6 @@ type state =
   | Comment(int)
   | LineComment;
 
-exception Todo(string);
-
-let explode = (input: string): list(char) => {
-  let rec exp = (i, chars) =>
-    i >= 0 ? exp(i - 1, [input.[i], ...chars]) : chars;
-  exp(String.length(input) - 1, []);
-};
-
 module StringMap = Map.Make(String);
 
 let keywords =
@@ -64,31 +56,34 @@ let keywords =
     |> add("return", Return)
   );
 
-let identify = string =>
-  switch (StringMap.find(string, keywords)) {
-  | exception Not_found => Ident(string)
-  | keyword => Keyword(keyword)
-  };
-
-/* Helper functions (to keep the lines short) */
-let ($^) = (s, c) => s ++ String.make(1, c);
-let atoi = int_of_string;
-let atof = float_of_string;
-
 let rec dump = (state: state) =>
   switch (state) {
-  | Number(string) => [Integer(atoi(string))]
-  | Partial(string) => [Invalid("."), ...dump(Number(string))]
-  | Fractional(string) => [FloatingPoint(atof(string))]
-  | Partial2(string) => [Invalid("E"), ...dump(Fractional(string))]
+  | Number(s) => [Integer(int_of_string(s))]
+  | Partial(s) => [Invalid("."), ...dump(Number(s))]
+  | Fractional(s) => [FloatingPoint(float_of_string(s))]
+  | Partial2(s) => [Invalid("E"), ...dump(Fractional(s))]
   | Partial3(s, c) => [Invalid(String.make(1, c)), ...dump(Partial2(s))]
-  | Scientific(string) => [FloatingPoint(atof(string))]
-  | String(string) => [identify(string)]
+  | Scientific(s) => [FloatingPoint(float_of_string(s))]
+  | String(s) => [
+      switch (StringMap.find(s, keywords)) {
+      | exception Not_found => Ident(s)
+      | keyword => Keyword(keyword)
+      },
+    ]
   | Comment(_) => []
   | LineComment => []
   };
 
-let tokenize2 = (~state=?, input: string) => {
+/* Helper function (to keep the lines short) */
+let ($^) = (s, c) => s ++ String.make(1, c);
+
+let explode = (input: string): list(char) => {
+  let rec exp = (i, chars) =>
+    i >= 0 ? exp(i - 1, [input.[i], ...chars]) : chars;
+  exp(String.length(input) - 1, []);
+};
+
+let tokenize = (~state=?, input: string) => {
   let rec tok = (input, buffer, tokens) => {
     switch (input) {
     /* No characters left; empty the buffer and reverse the tokens because we've been prepending */
@@ -151,8 +146,7 @@ let tokenize2 = (~state=?, input: string) => {
         | (',', t) => next(None, [Comma, ...t])
         /* Builders */
         | ('0'..'9' as i, t) => next(Some(Number(String.make(1, i))), t)
-        /* TODO: allow capital letters */
-        | ('a'..'z' as a, t) => next(Some(String(String.make(1, a))), t)
+        | (('a'..'z' | 'A'..'Z') as a, t) => next(Some(String("" $^ a)), t)
         /* Error */
         | (a, t) => next(None, [Invalid(String.make(1, a)), ...t])
         }
@@ -199,7 +193,7 @@ let tokenize2 = (~state=?, input: string) => {
       /* State: Identifiers */
       | Some(String(s) as state) =>
         switch (head, tokens) {
-        | ('a'..'z' as i, t) => next(Some(String(s $^ i)), t)
+        | (('a'..'z' | 'A'..'Z') as a, t) => next(Some(String(s $^ a)), t)
         | (_, t) => curr(None, dump(state) @ t)
         }
       /* State: Block comments (can be nested) */
@@ -220,10 +214,3 @@ let tokenize2 = (~state=?, input: string) => {
   };
   tok(explode(input), state, []);
 };
-
-/* This variant of the tokenize function discards the output state
-   because it is typically irrelevant */
-let tokenize = (~state=?, input: string) =>
-  switch (tokenize2(~state?, input)) {
-  | (tokens, _) => tokens
-  };

@@ -1,6 +1,12 @@
 open Jest;
 open Lexer;
 
+/* Wrap the tokenize function and discard the output state */
+let tokenize = (input: string) =>
+  switch (tokenize(input)) {
+  | (tokens, _) => tokens
+  };
+
 describe("Lexer", () => {
   open Expect;
   open! Expect.Operators;
@@ -125,21 +131,26 @@ describe("Lexer", () => {
     expect(tokenize("123.12345")) |> toEqual([FloatingPoint(123.12345)])
   );
 
-  test("doesn't read improper floats", () =>
-    expect(tokenize("123. 4.0E .5 .E 6.0E+"))
-    |> toEqual([
-         Integer(123),
-         Invalid("."),
-         FloatingPoint(4.0),
-         Invalid("E"),
-         Invalid("."),
-         Integer(5),
-         Invalid("."),
-         Invalid("E"),
-         FloatingPoint(6.0),
-         Invalid("E"),
-         Invalid("+")
-       ])
+  test("doesn't read float with trailing dot", () =>
+    expect(tokenize("123.")) |> toEqual([Integer(123), Invalid(".")])
+  );
+
+  test("doesn't read float with trailing E", () =>
+    expect(tokenize("4.0E"))
+    |> toEqual([FloatingPoint(4.0), Invalid("E")])
+  );
+
+  test("doesn't read float without leading number", () =>
+    expect(tokenize(".5")) |> toEqual([Invalid("."), Integer(5)])
+  );
+
+  test("doesn't read .E as float", () =>
+    expect(tokenize(".E")) |> toEqual([Invalid("."), Ident("E")])
+  );
+
+  test("doesn't read incomplete scientific notation float", () =>
+    expect(tokenize("6.0E+"))
+    |> toEqual([FloatingPoint(6.0), Invalid("E"), Invalid("+")])
   );
 
   test("reads floats expressed in scientific notation", () =>
@@ -169,6 +180,10 @@ describe("Lexer", () => {
 
   test("reads identifiers", () =>
     expect(tokenize("a bba")) |> toEqual([Ident("a"), Ident("bba")])
+  );
+
+  test("reads identifiers containing capital letters", () =>
+    expect(tokenize("aBC AAA")) |> toEqual([Ident("aBC"), Ident("AAA")])
   );
 
   test("reads identifiers followed by numbers", () =>
