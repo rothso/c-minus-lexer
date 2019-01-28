@@ -78,7 +78,7 @@ describe("Lexer", () => {
          Keyword(Void),
          Ident("main"),
          LParen,
-         RParen
+         RParen,
        ]);
   });
 
@@ -126,7 +126,28 @@ describe("Lexer", () => {
   );
 
   test("doesn't read improper floats", () =>
-    expect(tokenize("123.")) |> toEqual([Integer(123), Invalid(".")])
+    expect(tokenize("123. 4.0E .5 .E 6.0E+"))
+    |> toEqual([
+         Integer(123),
+         Invalid("."),
+         FloatingPoint(4.0),
+         Invalid("E"),
+         Invalid("."),
+         Integer(5),
+         Invalid("."),
+         Invalid("E"),
+         FloatingPoint(6.0),
+         Invalid("E"),
+         Invalid("+")
+       ])
+  );
+
+  test("reads floats expressed in scientific notation", () =>
+    expect(tokenize("1.2E2")) |> toEqual([FloatingPoint(120.0)])
+  );
+
+  test("reads floats expressed in signed scientific notation", () =>
+    expect(tokenize("120.0E-2")) |> toEqual([FloatingPoint(1.2)])
   );
 
   test("skips dangling float decimal", () =>

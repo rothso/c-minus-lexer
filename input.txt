@@ -13,4 +13,6 @@ else ret_urn gcd(vxxxxxxvvvvv, u-u/v*v);
 !
 }
 
+w = 126.2E+10
+
 return void while       void main()

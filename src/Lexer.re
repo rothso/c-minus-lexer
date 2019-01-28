@@ -35,16 +35,14 @@ type state =
   | Number(string)
   | Partial(string)
   | Fractional(string)
+  | Partial2(string)
+  | Partial3(string, char)
+  | Scientific(string)
   | String(string)
   | Comment(int)
   | LineComment;
 
 exception Todo(string);
-
-/* Helper functions (to keep the lines short) */
-let ($^) = (s, c) => s ++ String.make(1, c);
-let atoi = int_of_string;
-let atof = float_of_string;
 
 let explode = (input: string): list(char) => {
   let rec exp = (i, chars) =>
@@ -72,6 +70,24 @@ let identify = string =>
   | keyword => Keyword(keyword)
   };
 
+/* Helper functions (to keep the lines short) */
+let ($^) = (s, c) => s ++ String.make(1, c);
+let atoi = int_of_string;
+let atof = float_of_string;
+
+let rec dump = (state: state) =>
+  switch (state) {
+  | Number(string) => [Integer(atoi(string))]
+  | Partial(string) => [Invalid("."), ...dump(Number(string))]
+  | Fractional(string) => [FloatingPoint(atof(string))]
+  | Partial2(string) => [Invalid("E"), ...dump(Fractional(string))]
+  | Partial3(s, c) => [Invalid(String.make(1, c)), ...dump(Partial2(s))]
+  | Scientific(string) => [FloatingPoint(atof(string))]
+  | String(string) => [identify(string)]
+  | Comment(_) => []
+  | LineComment => []
+  };
+
 let tokenize2 = (~state=?, input: string) => {
   let rec tok = (input, buffer, tokens) => {
     switch (input) {
@@ -79,15 +95,7 @@ let tokenize2 = (~state=?, input: string) => {
     | [] => (
         List.rev(
           switch (buffer) {
-          | Some(Number(s)) => [Integer(atoi(s)), ...tokens]
-          | Some(Partial(s)) => [
-              Invalid("."),
-              Integer(atoi(s)),
-              ...tokens,
-            ]
-          | Some(Fractional(s)) => [FloatingPoint(atof(s)), ...tokens]
-          | Some(String(s)) => [identify(s), ...tokens]
-          | Some(Comment(_) | LineComment) => tokens /* TODO throw exception */
+          | Some(state) => dump(state) @ tokens
           | None => tokens
           },
         ),
@@ -143,34 +151,56 @@ let tokenize2 = (~state=?, input: string) => {
         | (',', t) => next(None, [Comma, ...t])
         /* Builders */
         | ('0'..'9' as i, t) => next(Some(Number(String.make(1, i))), t)
+        /* TODO: allow capital letters */
         | ('a'..'z' as a, t) => next(Some(String(String.make(1, a))), t)
         /* Error */
         | (a, t) => next(None, [Invalid(String.make(1, a)), ...t])
         }
       /* State: Valid numbers */
-      | Some(Number(n)) =>
+      | Some(Number(n) as state) =>
         switch (head, tokens) {
         | ('0'..'9' as i, t) => next(Some(Number(n $^ i)), t)
         | ('.', t) => next(Some(Partial(n)), t)
-        | (_, t) => curr(None, [Integer(atoi(n)), ...t])
+        | (_, t) => curr(None, dump(state) @ t)
         }
       /* State: Numbers ending with a decimal */
-      | Some(Partial(n)) =>
+      | Some(Partial(n) as state) =>
         switch (head, tokens) {
         | ('0'..'9' as i, t) => next(Some(Fractional(n ++ "." $^ i)), t)
-        | (_, t) => curr(None, [Invalid("."), Integer(atoi(n)), ...t])
+        | (_, t) => curr(None, dump(state) @ t)
         }
       /* State: Valid floats */
-      | Some(Fractional(f)) =>
+      | Some(Fractional(f) as state) =>
         switch (head, tokens) {
         | ('0'..'9' as i, t) => next(Some(Fractional(f $^ i)), t)
-        | (_, t) => curr(None, [FloatingPoint(atof(f)), ...t])
+        | ('E', t) => next(Some(Partial2(f)), t)
+        | (_, t) => curr(None, dump(state) @ t)
+        }
+      /* State: Floats ending in a E */
+      | Some(Partial2(f) as state) =>
+        switch (head, tokens) {
+        | ('0'..'9' as i, t) => next(Some(Scientific(f ++ "E" $^ i)), t)
+        | (('+' | '-') as s, t) => next(Some(Partial3(f, s)), t)
+        | (_, t) => curr(None, dump(state) @ t)
+        }
+      /* State: Scientific floats ending in a + or - */
+      | Some(Partial3(f, s) as state) =>
+        switch (head, tokens) {
+        | ('0'..'9' as i, t) =>
+          next(Some(Scientific(f ++ "E" $^ s $^ i)), t)
+        | (_, t) => curr(None, dump(state) @ t)
+        }
+      /* State: Valid floats in scientific notation */
+      | Some(Scientific(f) as state) =>
+        switch (head, tokens) {
+        | ('0'..'9' as i, t) => next(Some(Scientific(f $^ i)), t)
+        | (_, t) => curr(None, dump(state) @ t)
         }
       /* State: Identifiers */
-      | Some(String(s)) =>
+      | Some(String(s) as state) =>
         switch (head, tokens) {
         | ('a'..'z' as i, t) => next(Some(String(s $^ i)), t)
-        | (_, t) => curr(None, [identify(s), ...t])
+        | (_, t) => curr(None, dump(state) @ t)
         }
       /* State: Block comments (can be nested) */
       | Some(Comment(i)) as state =>
