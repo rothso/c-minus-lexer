@@ -54,7 +54,7 @@ Node.Fs.readFileAsUtf8Sync(file)
        /* Print the current line */
        Js.log("\027[36m>>>> " ++ line ++ "\027[0m");
        /* Tokenize it, resuming from the previous state */
-       let (tokens, nextState) = tokenize2(~state=?prevState, line);
+       let (tokens, nextState) = tokenize(~state=?prevState, line);
        /* Print the tokens */
        tokens |> List.map(tokenToString) |> List.iter(Js.log);
        /* The next line needs to know if we are in a comment state */
