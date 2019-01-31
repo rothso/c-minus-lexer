@@ -48,7 +48,7 @@ let file =
 
 /* Read the input C- file and tokenize it line-by-line */
 Node.Fs.readFileAsUtf8Sync(file)
-|> Js.String.split("\r\n")
+|> Js.String.split("\n")
 |> Array.to_list
 |> List.filter(item => item != "")
 |> List.fold_left(
