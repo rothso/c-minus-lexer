@@ -19,11 +19,11 @@ let tokenToString = (token: token): string =>
   | RParen => ")"
   | LBrace => "{"
   | RBrace => "}"
-  | Ident(string) => "id:\t" ++ string
-  | Integer(int) => "num:\t" ++ string_of_int(int)
-  | FloatingPoint(float) => "float:\t" ++ string_of_float(float)
+  | Ident(string) => "ID: " ++ string
+  | Integer(int) => "NUM: " ++ string_of_int(int)
+  | FloatingPoint(float) => "FLOAT: " ++ string_of_float(float)
   | Keyword(keyword) =>
-    "kw:\t"
+    "keyword: "
     ++ (
       switch (keyword) {
       | If => "if"
@@ -35,7 +35,7 @@ let tokenToString = (token: token): string =>
       | Return => "return"
       }
     )
-  | Invalid(string) => "error:\t" ++ string
+  | Invalid(string) => "Error: " ++ string
   };
 
 /* The user must provide the name of the C- file */
@@ -49,10 +49,12 @@ let file =
 /* Read the input C- file and tokenize it line-by-line */
 Node.Fs.readFileAsUtf8Sync(file)
 |> Js.String.split("\n")
-|> Array.fold_left(
+|> Array.to_list
+|> List.filter(item => item != "")
+|> List.fold_left(
      (prevState, line) => {
        /* Print the current line */
-       Js.log("\027[36m>>>> " ++ line ++ "\027[0m");
+       Js.log("\027[36mINPUT: " ++ line ++ "\027[0m");
        /* Tokenize it, resuming from the previous state */
        let (tokens, nextState) = tokenize(~state=?prevState, line);
        /* Print the tokens */
