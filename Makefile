@@ -1,8 +1,8 @@
-TMP_DIR=/var/tmp
-NODE_MODULES=$(TMP_DIR)/c-compiler-node_modules
-NODE=$(TMP_DIR)/node/bin/node
+BUILD_DIR=/var/tmp/$(shell whoami)
+NODE_MODULES=$(BUILD_DIR)/node_modules
+NODE=$(BUILD_DIR)/node/bin/node
 BSB=$(NODE_MODULES)/bs-platform
-export PATH := $(TMP_DIR)/node/bin:$(PATH)
+export PATH := $(BUILD_DIR)/node/bin:$(PATH)
 
 all: $(BSB)
 	@npm run build
@@ -16,15 +16,16 @@ $(BSB): $(NODE)
 
 $(NODE):
 	@echo "Installing nodejs v11.7.0..."
-	@cd $(TMP_DIR) && \
-	  wget -O node.tar.gz http://nodejs.org/dist/v11.7.0/node-v11.7.0-linux-x64.tar.gz && \
+	@mkdir -p $(BUILD_DIR)
+	@cd $(BUILD_DIR) && \
+	  wget -O node.tar.gz http://nodejs.org/dist/v11.7.0/node-v11.7.0-linux-x64.tar.gz 2>/dev/null && \
 	  tar -xf node.tar.gz && \
 	  mv node-v11.7.0-linux-x64 node && \
 	  rm node.tar.gz
 
 clean:
 	@rm -rf ~/.npm # delete npm cache
-	@rm -rf $(NODE_MODULES)
-	@rm -rf $(TMP_DIR)/node
+	@rm -rf $(BUILD_DIR)
+	@rm -f node_modules
 	@rm -f src/*.bs.js
 
