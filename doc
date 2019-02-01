@@ -1,0 +1,48 @@
+Project 1: Lexer
+===========================
+
+Rothanak So (n01128755)
+
+
+# Purpose
+
+The purpose of this project is to develop a lexer for C- according to the language spec.
+The program uses a state machine to process the input program character-by-character and 
+accumulate the longest valid tokens. The state machine is defined recursively, accepting
+an input of the tuple (input, state, tokens) and returning a list of tokens. 
+
+ReasonML was chosen as the language for this project because of its strong type system.
+Internally, each state is represented as its own variant type, which allows the ReasonML
+compiler to guarantee that a transition is defined for every state on every possible input.
+
+
+# Source files
+
+Source files are located in `src`. It contains the following files:
+
+   Lexer.re             Contains the tokenizer logic, independent of the project output
+   Main.re              Reads the input file, calls the tokenizer, and displays the output
+
+
+# Input
+
+The program requires an input file to be passed as the first argument to the p1 script.
+
+
+# Output
+
+The program will output directly to the console. The output will display the raw line
+being processed (including comment lines), followed by the generated tokens. Any errors
+will be reported alongside the valid tokens. Blank input lines will not be redisplayed.
+
+
+# How to execute
+
+The project was developed using ReasonML, which can run on Osprey through a portable
+version of NodeJS. All the necessary build tools (NodeJS, Bucklescript and the OCaml
+compiler) are automatically installed locally during the first `make`, which will
+generate *.bs.js files that can then be run on Node.
+
+  1. Run the `make` command to download the ReasonML compiler and runtime.
+  2. Run `./p1`, specifying the input file name.
+  3. Optionally, run `make clean` to delete the compiler.
