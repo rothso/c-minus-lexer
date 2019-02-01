@@ -25,6 +25,8 @@ type token =
   | RParen /* ) */
   | LBrace /* { */
   | RBrace /* } */
+  | LBracket /* [ */
+  | RBracket /* ] */
   | Ident(string)
   | Integer(int)
   | FloatingPoint(float)
@@ -120,11 +122,13 @@ let tokenize = (~state=?, input: string) => {
       | None =>
         switch (head, tokens) {
         | (' ' | '\t' | '\n' | '\r', t) => next(None, t)
-        /* Parentheses and braces */
+        /* Parentheses, braces and brackets */
         | ('(', t) => next(None, [LParen, ...t])
         | (')', t) => next(None, [RParen, ...t])
         | ('{', t) => next(None, [LBrace, ...t])
         | ('}', t) => next(None, [RBrace, ...t])
+        | ('[', t) => next(None, [LBracket, ...t])
+        | (']', t) => next(None, [RBracket, ...t])
         /* Addition and subtraction */
         | ('+', t) => next(None, [Plus, ...t])
         | ('-', t) => next(None, [Minus, ...t])
