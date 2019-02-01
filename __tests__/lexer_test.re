@@ -189,4 +189,8 @@ describe("Lexer", () => {
   test("reads identifiers followed by numbers", () =>
     expect(tokenize("abc99")) |> toEqual([Ident("abc"), Integer(99)])
   );
+
+  test("reads brackets", () =>
+    expect(tokenize("[]]")) |> toEqual([LBracket, RBracket, RBracket])
+  );
 });
