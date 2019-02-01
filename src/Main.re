@@ -19,6 +19,8 @@ let tokenToString = (token: token): string =>
   | RParen => ")"
   | LBrace => "{"
   | RBrace => "}"
+  | LBracket => "["
+  | RBracket => "]"
   | Ident(string) => "ID: " ++ string
   | Integer(int) => "NUM: " ++ string_of_int(int)
   | FloatingPoint(float) => "FLOAT: " ++ string_of_float(float)
